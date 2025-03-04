@@ -24,7 +24,6 @@ class HunterScraper(BaseScraper):
     
     def search(self, domain: str) -> Set[str]:
         """从 Hunter 查询子域名"""
-        log_info(f"正在从 Hunter 搜索子域名: {domain}")
         subdomains = set()
         
         if not self.api_key:
@@ -52,7 +51,13 @@ class HunterScraper(BaseScraper):
                 
                 while retry_count < max_retries:
                     response = self.session.get(self.base_url, params=params, timeout=10)
+                    
+                    if response.status_code != 200:
+                        log_error(f"Hunter API 返回错误: {response.status_code}")
+                        return subdomains
+                    
                     data = response.json()
+
                     
                     if data.get('code') == 429:
                         retry_count += 1

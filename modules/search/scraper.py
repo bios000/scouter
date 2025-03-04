@@ -20,6 +20,7 @@ def get_search_engine_subdomains(domain: str, **kwargs) -> Set[str]:
     from .fofa import FofaScraper
     from .hunter import HunterScraper
     from .shodan import ShodanScraper
+    from .fullhunt import FullHuntScraper
     
     manager.register('google', GoogleScraper)
     manager.register('bing', BingScraper)
@@ -28,5 +29,5 @@ def get_search_engine_subdomains(domain: str, **kwargs) -> Set[str]:
     manager.register('fofa', FofaScraper)
     manager.register('hunter', HunterScraper)
     manager.register('shodan', ShodanScraper)
-    
+    manager.register('fullhunt', FullHuntScraper)
     return manager.search(domain, kwargs) 

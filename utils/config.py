@@ -37,6 +37,25 @@ class Config:
         },
         'bevigil': {  # 添加 Bevigil 配置
             'api_key': ''
+        },
+        'fullhunt': {  # 添加 FullHunt 配置
+            'api_key': ''      # FullHunt API Key
+        },
+        'urlscan': {
+            'api_key': ''      # URLScan.io API Key
+        },
+        'alienvault': {
+            'api_key': ''      # AlienVault API Key
+        },
+        'riskiq': {
+            'api_key': '',     # RiskIQ API Key
+            'api_secret': ''   # RiskIQ API Secret
+        },
+        'threatbook': {
+            'api_key': ''      # 微步在线 API Key
+        },
+        'virustotal': {
+            'api_key': ''      # VirusTotal API Key
         }
     }
     

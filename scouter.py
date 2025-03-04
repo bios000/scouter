@@ -16,6 +16,7 @@ from modules.search.scraper import get_search_engine_subdomains
 from utils.colors import Colors
 from utils.logger import log_info, log_success, log_error, log_warning
 import asyncio
+from modules.intelligence.scraper import get_intelligence_subdomains
 
 
 
@@ -162,6 +163,7 @@ async def main():
     source_group.add_argument('--code', action='store_true', help='使用代码仓库搜索')
     source_group.add_argument('--public', action='store_true', help='使用公开DNS数据')
     source_group.add_argument('--search', action='store_true', help='使用搜索引擎')
+    source_group.add_argument('--intelligence', action='store_true', help='使用威胁情报')
     source_group.add_argument('--all', action='store_true', help='使用所有数据源')
     
     # 搜索引擎选项
@@ -173,6 +175,7 @@ async def main():
     search_group.add_argument('--fofa', action='store_true', help='使用 FOFA 搜索')
     search_group.add_argument('--hunter', action='store_true', help='使用奇安信鹰图搜索')
     search_group.add_argument('--shodan', action='store_true', help='使用 Shodan 搜索')
+    search_group.add_argument('--fullhunt', action='store_true', help='使用 FullHunt 搜索')
     
     # 代码仓库选项
     code_group = scan_parser.add_argument_group('代码仓库选项')
@@ -196,6 +199,15 @@ async def main():
     public_group.add_argument('--robtex', action='store_true', help='使用 Robtex')
     public_group.add_argument('--dnsdumpster', action='store_true', help='使用 DNSDumpster')
     public_group.add_argument('--bevigil', action='store_true', help='使用 BeVigil')
+    public_group.add_argument('--dnsgrep', action='store_true', help='使用 DNSGrep')
+    public_group.add_argument('--rapiddns', action='store_true', help='使用 RapidDNS')
+    public_group.add_argument('--urlscan', action='store_true', help='使用 URLScan.io')
+    
+    # 威胁情报选项
+    intel_group = scan_parser.add_argument_group('威胁情报选项')
+    intel_group.add_argument('--alienvault', action='store_true', help='使用 AlienVault OTX')
+    intel_group.add_argument('--threatbook', action='store_true', help='使用微步在线')
+    intel_group.add_argument('--virustotal', action='store_true', help='使用 VirusTotal')
     
     args = parser.parse_args()
     
@@ -284,7 +296,7 @@ async def main():
                     all_subdomains.update(ct_domains)
             
             # 公共 DNS 数据源
-            if args.public or args.ip138 or args.hackertarget or args.securitytrails or args.netcraft or args.robtex or args.dnsdumpster or args.bevigil or args.all:
+            if args.public or args.ip138 or args.hackertarget or args.securitytrails or args.netcraft or args.robtex or args.dnsdumpster or args.bevigil or args.dnsgrep or args.rapiddns or args.urlscan or args.all:
                 public_domains = get_public_dns_subdomains(
                     args.domain,
                     ip138=args.ip138 or args.all or args.public,
@@ -293,7 +305,10 @@ async def main():
                     netcraft=args.netcraft or args.all or args.public,
                     robtex=args.robtex or args.all or args.public,
                     dnsdumpster=args.dnsdumpster or args.all or args.public,
-                    bevigil=args.bevigil or args.all or args.public
+                    bevigil=args.bevigil or args.all or args.public,
+                    dnsgrep=args.dnsgrep or args.all or args.public,
+                    rapiddns=args.rapiddns or args.all or args.public,
+                    urlscan=args.urlscan or args.all or args.public
                 )
                 
                 if public_domains:
@@ -311,7 +326,7 @@ async def main():
                     all_subdomains.update(code_domains)
             
             # 搜索引擎子域名收集
-            if args.search or args.google or args.bing or args.baidu or args.quake360 or args.fofa or args.hunter or args.shodan or args.all:
+            if args.search or args.google or args.bing or args.baidu or args.quake360 or args.fofa or args.hunter or args.shodan or args.fullhunt or args.all:
                 search_domains = get_search_engine_subdomains(
                     args.domain,
                     google=args.google or args.all or args.search,
@@ -320,13 +335,24 @@ async def main():
                     quake360=args.quake360 or args.all or args.search,
                     fofa=args.fofa or args.all or args.search,
                     hunter=args.hunter or args.all or args.search,
-                    shodan=args.shodan or args.all or args.search
+                    shodan=args.shodan or args.all or args.search,
+                    fullhunt=args.fullhunt or args.all or args.search
                 )
                 
                 if search_domains:
                     all_subdomains.update(search_domains)
             
-            
+            # 威胁情报平台子域名收集
+            if args.alienvault or args.threatbook or args.virustotal or args.all:
+                intel_domains = get_intelligence_subdomains(
+                    args.domain,
+                    alienvault=args.alienvault or args.all ,
+                    threatbook=args.threatbook or args.all ,
+                    virustotal=args.virustotal or args.all 
+                )
+                
+                if intel_domains:
+                    all_subdomains.update(intel_domains)
             
             # DNS爆破模式
             if args.brute or args.all:
