@@ -6,6 +6,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import urlparse
 import time
+
+from utils.logger import log_error
 from ..base.scraper import BrowserScraper
 from utils.colors import Colors
 
@@ -118,7 +120,7 @@ class GoogleScraper(BrowserScraper):
                 
                 time.sleep(2)  # 避免请求过快
         except Exception as e:
-            print(self.format_log('-', Colors.error(f"Google 搜索失败: {str(e)}"), Colors.error))
+            log_error(f"Google 搜索失败: {str(e)}")
         
         finally:
             self.quit_driver()

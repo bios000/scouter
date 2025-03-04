@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from typing import Set
-from utils.logger import log_error, log_info
+from utils.logger import log_error, log_info, log_warning
 from .scraper import IntelligenceScraper
 
 class VirusTotalScraper(IntelligenceScraper):
@@ -16,7 +16,7 @@ class VirusTotalScraper(IntelligenceScraper):
         api_key = self.config.get_api_key('virustotal', 'api_key')
         
         if not api_key:
-            log_info("VirusTotal API 密钥未配置")
+            log_warning("VirusTotal API 密钥未配置")
             return subdomains
             
         try:

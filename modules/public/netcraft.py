@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
+
+from utils.logger import log_error
 from ..base.scraper import BrowserScraper
 from utils.colors import Colors
 
@@ -46,7 +48,6 @@ class NetcraftScraper(BrowserScraper):
                 # 检查是否有"无结果"消息
                 no_results = self.driver.find_elements(By.CSS_SELECTOR, "h2.center")
                 if no_results and "Sorry, no results were found." in no_results[0].text:
-                    print(Colors.info(f"[*] Netcraft 未找到 {domain} 的子域名"))
                     return subdomains
                 
                 # 如果有结果，继续处理
@@ -75,7 +76,7 @@ class NetcraftScraper(BrowserScraper):
                         break
                 
             except Exception as e:
-                print(Colors.error(f"[-] Netcraft 搜索失败: {str(e)}"))
+                log_error(f"Netcraft 搜索失败: {str(e)}")
                 return subdomains
         
         finally:

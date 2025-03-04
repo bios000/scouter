@@ -8,6 +8,8 @@ from scouter import log_warning
 from utils.colors import Colors
 import time
 
+from utils.logger import log_error
+
 class FofaScraper(BaseScraper):
     """FOFA 搜索引擎"""
     
@@ -57,7 +59,6 @@ class FofaScraper(BaseScraper):
         for dork in self.search_dorks:
             try:
                 query = dork.format(domain=domain)
-                # print(self.format_log('*', Colors.success(f"正在使用语法: {query}"), Colors.success))
                 
                 encoded_query = base64.b64encode(query.encode()).decode()
                 params = {
@@ -80,13 +81,11 @@ class FofaScraper(BaseScraper):
                         
                         if new_domains:
                             subdomains.update(new_domains)
-                        else:
-                            print(self.format_log('!', Colors.warning(f"使用语法 {query} 未找到结果"), Colors.warning))
-                
+                        
                 time.sleep(1)  # 避免请求过快
                 
             except Exception as e:
-                print(self.format_log('-', Colors.error(f"FOFA 搜索失败 ({query}): {str(e)}"), Colors.error))
+                log_error(f"FOFA 搜索失败 ({query}): {str(e)}")
                 continue
         
         return subdomains

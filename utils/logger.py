@@ -20,4 +20,4 @@ def log_error(message):
 def log_warning(message):
     """打印警告日志"""
     timestamp = datetime.now().strftime('%H:%M:%S')
-    print(f"[{Colors.info(timestamp)}][{Colors.warning('!')}] {Colors.warning(message)}") 
+    print(f"[{Colors.info(timestamp)}] [{Colors.warning('!')}] {Colors.warning(message)}") 

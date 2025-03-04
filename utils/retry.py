@@ -4,6 +4,7 @@ import time
 import functools
 from datetime import datetime
 from utils.colors import Colors
+from utils.logger import log_warning
 
 def retry_on_error(max_retries=3, delay=1):
     """网络请求重试装饰器
@@ -23,8 +24,7 @@ def retry_on_error(max_retries=3, delay=1):
                         raise  # 重新抛出异常
                     
                     timestamp = datetime.now().strftime('%H:%M:%S')
-                    print(f"[{Colors.info(timestamp)}][{Colors.warning('!')}] "
-                          f"{Colors.warning(f'请求失败 ({str(e)})，{delay} 秒后进行第 {attempt + 2} 次重试...')}")
+                    log_warning(f'请求失败 ({str(e)})，{delay} 秒后进行第 {attempt + 2} 次重试...')
                     time.sleep(delay)
             return None
         return wrapper

@@ -56,5 +56,4 @@ class DNSGrepScraper(PublicDNSScraper):
                     
         except Exception as e:
             log_error(f"从 DNSGrep 获取 {domain} 的子域名失败: {str(e)}")
-            
         return subdomains 

@@ -44,7 +44,7 @@ class DataSourceManager:
             future_to_source = {}
             for name, source_class in active_sources:
                 source = source_class()
-                log_info(f'正在从 {Colors.highlight(name)} {Colors.info("搜索子域名...")}')
+                # log_info(f'正在从 {Colors.highlight(name)} {Colors.info("搜索子域名...")}')
                 future_to_source[executor.submit(self._search_source, source, domain)] = (name, source)
             
             # 收集结果

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from typing import Set
-from utils.logger import log_error, log_info
+from utils.logger import log_error, log_info, log_warning
 from .scraper import IntelligenceScraper
 import base64
 
@@ -18,7 +18,7 @@ class RiskIQScraper(IntelligenceScraper):
         api_secret = self.config.get_api_key('riskiq', 'api_secret')
         
         if not (api_key and api_secret):
-            log_info("RiskIQ API 密钥未配置")
+            log_warning("RiskIQ API 密钥未配置")
             return subdomains
             
         try:

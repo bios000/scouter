@@ -19,7 +19,6 @@ class ShodanScraper(BaseScraper):
     
     def search(self, domain: str) -> Set[str]:
         """从 Shodan 查询子域名"""
-        log_info(f"正在从 Shodan 搜索子域名: {domain}")
         subdomains = set()
         
         if not self.api_key:

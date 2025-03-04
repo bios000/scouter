@@ -15,6 +15,7 @@ import string
 from concurrent.futures import as_completed
 import os
 import subprocess
+from modules.check.takeover import check_takeover
 
 class SubdomainFinder:
     def __init__(self, domain, debug=False):
@@ -27,8 +28,8 @@ class SubdomainFinder:
         self.server_weights = {
             '8.8.8.8': 10,    # Google DNS
             '8.8.4.4': 8,
-            '1.1.1.1': 8,    # Cloudflare
-            '1.0.0.1': 6,
+            # '1.1.1.1': 8,    # Cloudflare
+            # '1.0.0.1': 6,
             '208.67.222.222': 8,  # OpenDNS
             '208.67.220.220': 6,
             '114.114.114.114': 10, #114DNS
@@ -309,9 +310,22 @@ class SubdomainFinder:
                                 if has_a_record:
                                     valid_domains.add(domain)
                                     valid_records[domain] = {'A': valid_records[domain]['A'], 'CNAME': valid_records[domain]['CNAME']}
-                                elif self.debug and valid_records[domain]['CNAME']:
-                                    log_info(f"域名 {Colors.highlight(domain)} 只有CNAME记录: {Colors.highlight(', '.join(valid_records[domain]['CNAME']))}")
+                                elif valid_records[domain]['CNAME']:
+                                    # 如果只有 CNAME 记录,检查是否可能被接管
+                                    temp_records = {domain: valid_records[domain]}
+                                    takeover_results = check_takeover(self.domain, temp_records, self.debug)
                                     
+                                    if takeover_results:
+                                        # 如果发现接管风险,也将其添加到有效域名集合
+                                        valid_domains.add(domain)
+                                        valid_records[domain] = {'A': [], 'CNAME': valid_records[domain]['CNAME']}
+                                        log_warning(f"域名 {Colors.highlight(domain)} 只有CNAME记录且存在接管风险!")
+                                        for info in takeover_results.values():
+                                            log_warning(f"  - CNAME: {Colors.highlight(info['cname'])}")
+                                            log_warning(f"  - 服务: {Colors.highlight(info['service'])}")
+                                            log_warning(f"  - 详情: {Colors.highlight(info['details'])}")
+                                    elif self.debug:
+                                        log_info(f"域名 {Colors.highlight(domain)} 只有CNAME记录: {Colors.highlight(', '.join(valid_records[domain]['CNAME']))}")
                         except json.JSONDecodeError as e:
                             if self.debug:
                                 log_error(f'JSON解析失败: {str(e)}')
@@ -353,9 +367,9 @@ class SubdomainFinder:
                             # 只检查 IP 是否匹配泛解析
                             is_wildcard = domain_ips and domain_ips.issubset(wildcard_ips)
                             
-                            if is_wildcard and self.debug:
-                                log_warning(f"域名 {Colors.highlight(domain)} 命中IP泛解析: "
-                                          f"{Colors.highlight(', '.join(domain_ips))}")
+                            # if is_wildcard and self.debug:
+                            #     log_warning(f"域名 {Colors.highlight(domain)} 命中IP泛解析: "
+                            #               f"{Colors.highlight(', '.join(domain_ips))}")
                             
                             return domain, records, is_wildcard
                             

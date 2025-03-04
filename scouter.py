@@ -17,6 +17,8 @@ from utils.colors import Colors
 from utils.logger import log_info, log_success, log_error, log_warning
 import asyncio
 from modules.intelligence.scraper import get_intelligence_subdomains
+from modules.check.axfr import check_axfr
+from modules.check.takeover import check_takeover
 
 
 
@@ -229,13 +231,13 @@ async def main():
                 if len(parts) == 2:
                     service, key = parts
                     config.set_api_key(service, key)
-                    print(f"[+] 已设置 {service} 的 API 密钥")
+                    log_success(f"已设置 {service} 的 API 密钥")
                 elif len(parts) == 3:
                     service, key_type, value = parts
                     config.set_api_key(service, value, key_type)
-                    print(f"[+] 已设置 {service} 的 {key_type} 为 {value}")
+                    log_success(f"[+] 已设置 {service} 的 {key_type} 为 {value}")
                 else:
-                    print("[-] 无效的格式，请使用 service:key 或 service:key_type:value")
+                    log_error("无效的格式，请使用 service:key 或 service:key_type:value")
                 return
                 
             elif args.get:
@@ -245,16 +247,16 @@ async def main():
                     service = parts[0]
                     key = config.get_api_key(service)
                     if key:
-                        print(f"{service}: {key}")
+                        log_info(f"{service}: {key}")
                     else:
-                        print(f"[-] 未找到 {service} 的 API 密钥")
+                        log_warning(f"[-] 未找到 {service} 的 API 密钥")
                 elif len(parts) == 2:
                     service, key_type = parts
                     key = config.get_api_key(service, key_type)
                     if key:
-                        print(f"{service} {key_type}: {key}")
+                        log_info(f"{service} {key_type}: {key}")
                     else:
-                        print(f"[-] 未找到 {service} 的 {key_type}")
+                        log_warning(f"未找到 {service} 的 {key_type}")
                 return
                 
             elif args.list:
@@ -280,7 +282,90 @@ async def main():
             all_subdomains = set()
             dns_records = {}
             
+            # 只在 all 模式下检测域传送漏洞
+            if args.all:
+                axfr_results = check_axfr(args.domain)
+                
+                if axfr_results:
+                    # 如果存在域传送漏洞，直接使用域传送获取的子域名
+                    log_success(f"发现 {len(axfr_results)} 个存在域传送漏洞的 NS 服务器")
+                    
+                    for ns, domains in axfr_results.items():
+                        log_success(f"从 NS 服务器 {ns} 获取到 {len(domains)} 个子域名")
+                        all_subdomains.update(domains)
+                    
+                    print(Colors.BLUE + "\n" + "=" * 70)
+                    print(f"{Colors.section('域传送漏洞利用结果')}")
+                    print(f"{Colors.success('获取到子域名总数:')} {Colors.highlight(len(all_subdomains))}")
+                    print("=" * 70 + Colors.RESET)
+                    
+                    # 直接进行 DNS 解析
+                    if len(all_subdomains) > 0:
+                        log_info("正在对获取到的子域名进行 DNS 解析...")
+                        finder = SubdomainFinder(args.domain, debug=args.debug)
+                        resolved_domains, dns_records = finder.dns_brute(all_subdomains, debug=args.debug)
+                        
+                        # 保存结果
+                        if resolved_domains:
+                            # 确定输出文件和格式
+                            output_file = None
+                            output_format = 'txt'  # 默认格式
+                            
+                            if args.txt is not None:
+                                output_format = 'txt'
+                                output_file = args.txt if args.txt != 'default' else None
+                            elif args.json is not None:
+                                output_format = 'json'
+                                output_file = args.json if args.json != 'default' else None
+                            elif args.csv is not None:
+                                output_format = 'csv'
+                                output_file = args.csv if args.csv != 'default' else None
+                            
+                            # 如果没有指定输出文件，使用默认文件名
+                            if not output_file or output_file == 'default':
+                                output_file = os.path.join(get_result_dir(), f"{args.domain}.{output_format}")
+                            else:
+                                # 如果指定了完整路径，使用指定的路径
+                                if not os.path.isabs(output_file):
+                                    output_file = os.path.join(get_result_dir(), output_file)
+                            
+                            # 确保输出目录存在
+                            output_dir = os.path.dirname(output_file)
+                            if not os.path.exists(output_dir):
+                                try:
+                                    os.makedirs(output_dir)
+                                    log_info(f"创建输出目录: {output_dir}")
+                                except Exception as e:
+                                    log_error(f"创建输出目录失败: {str(e)}")
+                                    return
+                            
+                            try:
+                                save_results(resolved_domains, output_file, output_format, dns_records)
+                                log_success(f"所有结果已保存到: {output_file}")
+                            except Exception as e:
+                                log_error(f"保存结果失败: {str(e)}")
+                            
+                            # 打印最终统计信息
+                            elapsed_time = time.time() - start_time
+                            print("\n" + Colors.BLUE + "=" * 70)
+                            print(f"{Colors.section('扫描统计')}")
+                            print(f"{Colors.success('目标域名:')} {Colors.highlight(args.domain)}")
+                            print(f"{Colors.success('扫描方式:')} {Colors.highlight('域传送漏洞利用')}")
+                            print(f"{Colors.success('扫描用时:')} {Colors.highlight(f'{elapsed_time:.2f} 秒')}")
+                            print(f"{Colors.success('发现子域名:')} {Colors.highlight(len(all_subdomains))} 个")
+                            print(f"{Colors.success('有效子域名:')} {Colors.highlight(len(resolved_domains))} 个")
+                            print("=" * 70 + Colors.RESET)
+                            
+                            
+                        
+                    else:
+                        log_error("未发现任何有效子域名")
+                        return
+                
+                else:
+                    log_info("未发现域传送漏洞，将使用其他方式搜集子域名...")
             
+            # 继续原有的子域名收集逻辑
             # 证书透明度日志搜索
             if args.ct or args.crtsh or args.certspotter or args.censys or args.sslmate or args.racent or args.all:
                 ct_domains = get_ct_subdomains(
@@ -343,12 +428,12 @@ async def main():
                     all_subdomains.update(search_domains)
             
             # 威胁情报平台子域名收集
-            if args.alienvault or args.threatbook or args.virustotal or args.all:
+            if args.alienvault or args.threatbook or args.virustotal or args.all or args.intelligence:
                 intel_domains = get_intelligence_subdomains(
                     args.domain,
-                    alienvault=args.alienvault or args.all ,
-                    threatbook=args.threatbook or args.all ,
-                    virustotal=args.virustotal or args.all 
+                    alienvault=args.alienvault or args.all or args.intelligence,
+                    threatbook=args.threatbook or args.all or args.intelligence,
+                    virustotal=args.virustotal or args.all or args.intelligence
                 )
                 
                 if intel_domains:
@@ -357,7 +442,7 @@ async def main():
             # DNS爆破模式
             if args.brute or args.all:
                 # 检查是否指定了字典文件
-                default_wordlist = os.path.join(os.path.dirname(__file__), 'dict', 'test.txt')
+                default_wordlist = os.path.join(os.path.dirname(__file__), 'dict', 'big_test.txt')
                 
                 if not args.wordlist:
                     # 使用默认字典文件
@@ -433,6 +518,18 @@ async def main():
                         log_success(f"所有结果已保存到: {output_file}")
                     except Exception as e:
                         log_error(f"保存结果失败: {str(e)}")
+                    
+                    # 检查子域名接管风险
+                    takeover_results = check_takeover(args.domain, dns_records, debug=args.debug)
+                    if takeover_results:
+                        print("\n" + Colors.BLUE + "=" * 70)
+                        print(f"{Colors.section('存在接管风险的子域名')}")
+                        for subdomain, info in takeover_results.items():
+                            print(f"\n{Colors.warning('子域名:')} {Colors.highlight(subdomain)}")
+                            print(f"{Colors.warning('CNAME:')} {Colors.highlight(info['cname'])}")
+                            print(f"{Colors.warning('服务:')} {Colors.highlight(info['service'])}")
+                            print(f"{Colors.warning('详情:')} {Colors.highlight(info['details'])}")
+                        print("=" * 70 + Colors.RESET)
                 else:
                     log_error("未发现任何有效子域名")
             
